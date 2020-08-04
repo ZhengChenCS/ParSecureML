@@ -98,6 +98,8 @@ void Triplet::GetData(float *input_A, float *input_B){
 void Triplet::Rec(int MPI_dest){
 	int countA = 0;
 	int countB = 0;
+	int countA2;
+	int countB2;
 	for(int i = 0; i < row1*col1; i++){
 		delta_A[i] = A[i] - old_A[i];
 		if(abs(delta_A[i]) < 0.00001){
@@ -112,14 +114,33 @@ void Triplet::Rec(int MPI_dest){
 		}
 		old_B[i] = B[i];
 	}
+	for(int i = 0; i < row1*col1; i++){
+		E1[i] = A[i] - U[i];
+	}
+	for(int i = 0; i < row2*col2; i++){
+		F1[i] = B[i] - V[i];
+	}
 	int csrFlagA1 = 0, csrFlagA2 = 0;
+	struct CSR deltaACsr1;
+	struct CSR deltaACsr2;
 	MPI_Status status;
 	if((double)countA/(row1*col1) > 0.75){
 		csrFlagA1 = 1;
 	}
 	MPI_Sendrecv(&csrFlagA1, 1, MPI_INT, MPI_dest, 0, &csrFlagA2, 1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
-	if(csrFlagA1 == 1){
-		struct CSR deltaACsr1;
+	if(csrFlagA1==1 && csrFlagA2==1){
+		MallocCsr(deltaACsr1, countA, row1, col1);
+		Compress(delta_A, deltaACsr1, countA, row1, col1);
+		MPI_Sendrecv(&countA, 1, MPI_INT, MPI_dest, 0, &countA2, 1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		MallocCsr(deltaACsr2, countA2, row1, col1);
+		MPI_Sendrecv(deltaACsr1.val, countA, MPI_FLOAT, MPI_dest, 0, deltaACsr2.val, countA2, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		MPI_Sendrecv(deltaACsr1.col, countA, MPI_INT, MPI_dest, 0, deltaACsr2.col, countA2, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		MPI_Sendrecv(deltaACsr1.row, row1, MPI_INT, MPI_dest, 0, deltaACsr2.row, row1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		deCompress(deltaACsr2, countA2, row1, col1, E2);
+		ReleaseCsr(deltaACsr1);
+		ReleaseCsr(deltaACsr2);
+	}
+	if(csrFlagA1==1 && csrFlagA2==0){
 		MallocCsr(deltaACsr1, countA, row1, col1);
 		Compress(delta_A, deltaACsr1, countA, row1, col1);
 		MPI_Send(&countA, 1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD);
@@ -127,55 +148,63 @@ void Triplet::Rec(int MPI_dest){
 		MPI_Send(deltaACsr1.col, countA, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD);
 		MPI_Send(deltaACsr1.row, row1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD);
 		ReleaseCsr(deltaACsr1);
-	}else{
-		for(int i = 0; i < row1*col1; i++){
-			E1[i] = A[i] - U[i];
-		}
-		MPI_Send(E1, row1*col1, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD);
-	}
-	if(csrFlagA2 == 1){
-		struct CSR deltaACsr2;
-		int val_countA;
-		MPI_Recv(&val_countA, 1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
-		MallocCsr(deltaACsr2, val_countA, row1, col1);
-		MPI_Recv(deltaACsr2.val, val_countA, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
-		MPI_Recv(deltaACsr2.col, val_countA, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
-		MPI_Recv(deltaACsr2.row, row1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
-		deCompress(deltaACsr2, val_countA, row1, col1, E2);
-		ReleaseCsr(deltaACsr2);
-	}else{
 		MPI_Recv(E2, row1*col1, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
 	}
+	if(csrFlagA1==0 && csrFlagA2==1){
+		MPI_Recv(&countA2, 1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		MallocCsr(deltaACsr2, countA2, row1, col1);
+		MPI_Recv(deltaACsr2.val, countA2, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		MPI_Recv(deltaACsr2.col, countA2, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		MPI_Recv(deltaACsr2.row, row1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		deCompress(deltaACsr2, countA2, row1, col1, E2);
+		ReleaseCsr(deltaACsr2);
+		MPI_Send(E1, row1*col1, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD);
+	}
+	if(csrFlagA1==0 && csrFlagA2==0){
+		MPI_Sendrecv(E1, row1*col1, MPI_FLOAT, MPI_dest, 0, E2, row1*col1, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+	}
+
 	int csrFlagB1 = 0, csrFlagB2 = 0;
 	if((double)countB/(row2*col2) > 0.75){
 		csrFlagB1 = 1;
 	}
 	MPI_Sendrecv(&csrFlagB1, 1, MPI_INT, MPI_dest, 0, &csrFlagB2, 1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
-	if(csrFlagB1 == 1){
-		struct CSR deltaBCsr1;
-		MallocCsr(deltaBCsr1, countB, row2, col2);
-		Compress(delta_B, deltaBCsr1, countB, row2, col2);
+	struct CSR deltaBCsr1;
+	struct CSR deltaBCsr2;
+	if(csrFlagB1==1 && csrFlagB2==1){
+		MallocCsr(deltaBCsr1, countB, row1, col1);
+		Compress(delta_B, deltaBCsr1, countB, row1, col1);
+		MPI_Sendrecv(&countB, 1, MPI_INT, MPI_dest, 0, &countB2, 1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		MallocCsr(deltaBCsr2, countB2, row1, col1);
+		MPI_Sendrecv(deltaBCsr1.val, countB, MPI_FLOAT, MPI_dest, 0, deltaBCsr2.val, countB2, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		MPI_Sendrecv(deltaBCsr1.col, countB, MPI_INT, MPI_dest, 0, deltaBCsr2.col, countB2, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		MPI_Sendrecv(deltaBCsr1.row, row1, MPI_INT, MPI_dest, 0,  deltaBCsr2.row, row1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		deCompress(deltaBCsr2, countB2, row1, col1, F2);
+		ReleaseCsr(deltaBCsr1);
+		ReleaseCsr(deltaBCsr2);
+	}
+	if(csrFlagB1==1 && csrFlagB2==0){
+		MallocCsr(deltaBCsr1, countB, row1, col1);
+		Compress(delta_B, deltaBCsr1, countB, row1, col1);
 		MPI_Send(&countB, 1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD);
 		MPI_Send(deltaBCsr1.val, countB, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD);
-		MPI_Send(deltaBCsr1.col, countA, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD);
+		MPI_Send(deltaBCsr1.col, countB, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD);
 		MPI_Send(deltaBCsr1.row, row1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD);
 		ReleaseCsr(deltaBCsr1);
-	}else{
-		for(int i = 0; i < row2*col2; i++){
-			F1[i] = B[i] - V[i];
-		}
+		MPI_Recv(F2, row2*col2, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+	}
+	if(csrFlagB1==0 && csrFlagB2==1){
+		MPI_Recv(&countB2, 1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		MallocCsr(deltaBCsr2, countB2, row1, col1);
+		MPI_Recv(deltaBCsr2.val, countB2, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		MPI_Recv(deltaBCsr2.col, countB2, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		MPI_Recv(deltaBCsr2.row, row1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		deCompress(deltaBCsr2, countB2, row1, col1, E2);
+		ReleaseCsr(deltaBCsr2);
 		MPI_Send(F1, row2*col2, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD);
 	}
-	if(csrFlagB2 == 1){
-		struct CSR deltaBCsr2;
-		int val_countB;
-		MPI_Recv(&val_countB, 1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
-		MallocCsr(deltaBCsr2, val_countB, row2, col2);
-		MPI_Recv(deltaBCsr2.val, val_countB, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
-		MPI_Recv(deltaBCsr2.col, val_countB, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
-		MPI_Recv(deltaBCsr2.row, row1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
-		deCompress(deltaBCsr2, val_countB, row2, col2, F2);
-		ReleaseCsr(deltaBCsr2);
+	if(csrFlagB1==0 && csrFlagB2==0){
+		MPI_Sendrecv(F1, row2*col2, MPI_FLOAT, MPI_dest, 0, F2, row2*col2, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
 	}
 	for(int i = 0; i < row1*col1; i++){
 		E[i] = E1[i] + E2[i];

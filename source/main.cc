@@ -20,7 +20,7 @@
 #include "mpi.h"
 using namespace std;
 
-const int N = 1;
+const int N = 4096;
 
 double timestamp(){
     struct timeval time;
@@ -60,7 +60,7 @@ int main(int argc, char **argv){
             B1[i] = rand()%256;
             B2[i] = B[i] - B1[i];
         } 
-        cout << "Client" << endl;
+        cout << "Client..." << endl;
         Support sp;
         sp.GetShape(N, N, N, N);
         sp.Initial();
@@ -84,6 +84,7 @@ int main(int argc, char **argv){
         for(int i = 0; i < N*N; i++){
             C[i] = C1[i] + C2[i];
         }
+        cout << "finished." << endl;
         free(A1);
         free(A2);
         free(B1);
@@ -99,7 +100,6 @@ int main(int argc, char **argv){
         int flag;
         float *A1 = (float*)malloc(sizeof(float)*N*N);
         float *B1 = (float*)malloc(sizeof(float)*N*N);
-
         cout << "server" << MPI_rank << "..." << endl;
         MPI_Recv(&flag, 1, MPI_INT, MPI_client, 0, MPI_COMM_WORLD, &status);
         MPI_Recv(A1, N*N, MPI_FLOAT, MPI_client, 0, MPI_COMM_WORLD, &status);
@@ -108,7 +108,7 @@ int main(int argc, char **argv){
         T.GetShape(N, N, N, N);
         T.Initial();
         T.Recv(MPI_client);
-
+        offline_etime = timestamp();
         cout << "Server" << MPI_rank << ": offline end time:" << offline_etime-offline_stime << "." << endl;
 
         double online_stime, online_etime;
@@ -124,9 +124,8 @@ int main(int argc, char **argv){
         T.Rec(MPI_dest);
         T.OP(flag);
         online_etime = timestamp();
-        
-        cout << "Server" << MPI_rank << "online phase time:" << online_etime-online_stime << endl;
-        cout << "Server" << MPI_rank << "send to client..." << endl;
+        cout << "Server" << MPI_rank << " online phase time:" << online_etime-online_stime << endl;
+        cout << "Server" << MPI_rank << " send to client..." << endl;
 
         MPI_Send(T.C, N*N, MPI_FLOAT, MPI_client, 0, MPI_COMM_WORLD);
         T.Release();

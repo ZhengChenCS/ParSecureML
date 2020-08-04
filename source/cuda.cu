@@ -5,7 +5,7 @@ void MallocD(float *&gpu_a, int size){
     cudaError_t cudaStat;
     cudaStat = cudaMalloc((void**)&gpu_a, sizeof(*gpu_a)*size);
     if(cudaStat != cudaSuccess){
-        cout << "Malloc failed." << endl;
+        cout << "Malloc failed:" << cudaGetErrorString(cudaStat)<< endl;
         exit(0);
     }
 }
@@ -117,7 +117,7 @@ void Triplet::cudaTripletMul(int flag){
         exit(0);
     }
     cublasDestroy(handle);
-    cudaTripletSum<<<row1, col2>>>(GPU_C, fac1, fac2, GPU_Z, row1*col2);
+    cudaTripletSum<<<row1*col1/1024+1024, 1024>>>(GPU_C, fac1, fac2, GPU_Z, row1*col2);
     cudaStat = cudaGetLastError();
     if(cudaStat != cudaSuccess){
         cout << "Kernel launch failed." << endl;
