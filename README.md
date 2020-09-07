@@ -36,7 +36,7 @@ Machine learning has been widely used in our daily lives. Large amounts of data 
 
 ​	You can also use other allowed  methods to run, our program needs three nodes to run.
 
-##Acknowledgement
+## Acknowledgement
 
 ParSecureML  is developed by Renmin University of China, Shenzhen University, Tsinghua University.
 
