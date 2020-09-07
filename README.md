@@ -24,9 +24,19 @@ Machine learning has been widely used in our daily lives. Large amounts of data 
 
 2.run ``make``.
 
-3.run ``bin/run.sh``
+3.``cd bin``
 
-## Acknowledgement
+4.If slurm system is installed on your device, 
+
+​	run ``run.sh``
+
+​	If not, you can use ``mpirun`` to run the program,
+
+​	run  ``mpirun.sh``
+
+​	You can also use other allowed  methods to run, our program needs three nodes to run.
+
+##Acknowledgement
 
 ParSecureML  is developed by Renmin University of China, Shenzhen University, Tsinghua University.
 

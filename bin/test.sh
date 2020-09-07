@@ -1,1 +1,1 @@
-srun -N 3 -n 3 line
+srun -N 3 -n 3  linear

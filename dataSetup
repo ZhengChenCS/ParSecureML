@@ -1,0 +1,32 @@
+mnist:
+--train_size 60000
+--batch_size 128
+--SIZE 728
+--FSIZE 5
+--row 28
+--col 28
+--alpha 0.01
+VGGFace2:
+--train_size 40000
+--batch_size 128
+--SIZE 40000
+--FSIZE 5
+--row 200
+--col 200
+--alpha 0.01
+NIST:
+--train_size 4000
+---batch_size 128
+--SIZE 262144
+--FSIZE 5
+--row 512
+--col 512
+--alpha 0.01
+SYNTHETIC:
+--train_size 640000
+--batch_size 128
+--SIZE 2048
+--FSIZE 5
+--row 64
+--col 32
+--alpha 0.01

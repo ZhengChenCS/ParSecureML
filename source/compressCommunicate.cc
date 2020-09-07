@@ -14,11 +14,15 @@ void ReleaseCsr(struct CSR &C){
     free(C.val);
     free(C.col);
     free(C.row);
+	C.val = NULL;
+	C.col = NULL;
+	C.row = NULL;
 }
 void Compress(float *matrix, struct CSR &C, int val_count, int row, int col){
     int count = 0;
 	for(int i = 0; i < row; i++){
 		int flag = 1;
+		C.row[i] = 0;
 		for(int j = 0; j < col; j++){
 			if(abs(matrix[i*col+j]) < 1e-3){
 				continue;
@@ -26,7 +30,7 @@ void Compress(float *matrix, struct CSR &C, int val_count, int row, int col){
 				C.val[count] = matrix[i*col+j];
 				C.col[count++] = j;
 				if(flag == 1){
-					C.row[i] = j;
+					C.row[i]++;
 					flag = 0;
 				}
 			}
@@ -40,8 +44,10 @@ void deCompress(struct CSR &C, int val_count, int row, int col, float *mat){
 	int cur = 0;
 	for(int i = 0; i < row; i++){
 		if(C.row[i] == -1) continue;
-		for(int j = C.row[i]; j < C.row[i+1]; j++){
-			mat[i*col+j] += C.val[cur++];
+		for(int j = 0; j < C.row[i]; j++){
+			// mat[i*col+C.col[cur]] = 1;
+			mat[i*col+C.col[cur]] += C.val[cur];
+			cur++;
 		}
 	}
 }

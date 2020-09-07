@@ -16,10 +16,10 @@
 #include <unistd.h>
 #include <cstring>
 #include "../include/ParSecureML.h"
-#include "mpi.h"
 #include "../include/read.h"
+#include "mpi.h"
 using namespace std;
-
+const int outputDim = 50;
 float *labels;
 float *images;
 string imagesPath;
@@ -31,6 +31,7 @@ int SIZE;
 int row;
 int col;
 int FSIZE;
+float alpha;
 
 int dim1 = 784;
 int dim2 = 784;
@@ -49,7 +50,13 @@ int main(int argc, char **argv){
     double all_stime, all_etime;
     all_stime = timestamp();
     double offline_stime;
-    ifstream setup("setup");
+        string setupFile = argv[1];
+    cout << "setup file: " << setupFile << endl;
+    ifstream setup(setupFile);
+    if(!setup.is_open()){
+        cout << "Setup not exist." << endl;
+        return 0;
+    }
     if(!setup.is_open()){
         cout << "Setup not exist." << endl;
         return 0;
@@ -84,6 +91,9 @@ int main(int argc, char **argv){
         else if(attr == "--FSIZE"){
             para >> FSIZE;
         }
+        else if(attr == "--alpha"){
+            para >> alpha;
+        }
         else{
             cout << "Setup parameters error." << endl;
             return 0;
@@ -111,14 +121,14 @@ int main(int argc, char **argv){
     if(MPI_rank == MPI_client){
         // read_Label(str_labels, labels);
         // read_Images(str_images, images);
-        float *model1 = (float*)malloc(sizeof(float)*SIZE*50);
-        for(int i = 0; i < SIZE*50; i++){
+        float *model1 = (float*)malloc(sizeof(float)*SIZE*outputDim);
+        for(int i = 0; i < SIZE*outputDim; i++){
             model1[i] = (float)rand()/RAND_MAX;
         }
         float *images_th1 = (float*)malloc(sizeof(float)*train_size*SIZE);
         float *images_th2 = (float*)malloc(sizeof(float)*train_size*SIZE);
-        float *model1_th1 = (float*)malloc(sizeof(float)*SIZE*50);
-        float *model1_th2 = (float*)malloc(sizeof(float)*SIZE*50);
+        float *model1_th1 = (float*)malloc(sizeof(float)*SIZE*outputDim);
+        float *model1_th2 = (float*)malloc(sizeof(float)*SIZE*outputDim);
         float *y_hat1 = (float*)malloc(sizeof(float)*train_size);
         float *y_hat2 = (float*)malloc(sizeof(float)*train_size);
         double c_mstime, c_metime;
@@ -130,7 +140,7 @@ int main(int argc, char **argv){
             }
         }
         
-        for(int i = 0; i < SIZE*50; i++){
+        for(int i = 0; i < SIZE*outputDim; i++){
             model1_th1[i] = (float)rand() /RAND_MAX;
             model1_th2[i] = model1[i] - model1_th1[i];
         }
@@ -145,11 +155,11 @@ int main(int argc, char **argv){
         cout << "sp start ..." << endl;
         c_mstime = timestamp();
         Support sp1, sp2, sp3, sp4, sp5, sp6, sp7, sp8, sp9;
-        sp1.GetShape(batch_size, SIZE, SIZE, 50);
+        sp1.GetShape(batch_size, SIZE, SIZE, outputDim);
         sp1.Initial();
         sp1.Assign();
         //cout << "here" << endl;
-        sp2.GetShape(SIZE, batch_size, batch_size, 50);
+        sp2.GetShape(SIZE, batch_size, batch_size, outputDim);
         sp2.Initial();
         sp2.Assign();
 
@@ -157,17 +167,23 @@ int main(int argc, char **argv){
         cout << "Client make time:" << c_metime - c_mstime << endl;
         MPI_Send(&flag1, 1, MPI_INT, MPI_server1, 0, MPI_COMM_WORLD);
         MPI_Send(images_th1, train_size*SIZE, MPI_FLOAT, MPI_server1, 0, MPI_COMM_WORLD);
-        MPI_Send(model1_th1, SIZE*50, MPI_FLOAT, MPI_server1, 0, MPI_COMM_WORLD);
+        MPI_Send(model1_th1, SIZE*outputDim, MPI_FLOAT, MPI_server1, 0, MPI_COMM_WORLD);
         MPI_Send(y_hat1, train_size, MPI_FLOAT, MPI_server1, 0, MPI_COMM_WORLD);
         
         MPI_Send(&flag2, 1, MPI_INT, MPI_server2, 0, MPI_COMM_WORLD);
         MPI_Send(images_th2, train_size*SIZE, MPI_FLOAT, MPI_server2, 0, MPI_COMM_WORLD);
-        MPI_Send(model1_th2, SIZE*50, MPI_FLOAT, MPI_server2, 0, MPI_COMM_WORLD);
+        MPI_Send(model1_th2, SIZE*outputDim, MPI_FLOAT, MPI_server2, 0, MPI_COMM_WORLD);
         MPI_Send(y_hat2, train_size, MPI_FLOAT, MPI_server2, 0, MPI_COMM_WORLD);
-        //cout << "here" << endl;
         sp1.Send(MPI_server1, MPI_server2);
         sp2.Send(MPI_server1, MPI_server2);
         cout << "Client:Send finished." << endl;
+        MPI_Status status;
+        MPI_Recv(model1_th1, SIZE*outputDim, MPI_FLOAT, MPI_server1, 0, MPI_COMM_WORLD, &status);
+        MPI_Recv(model1_th2, SIZE*outputDim, MPI_FLOAT, MPI_server2, 0, MPI_COMM_WORLD, &status);
+        for(int i = 0; i < SIZE*outputDim; i++){
+            model1[i] = model1_th1[i] + model1_th2[i];
+        }
+        cout << "finished." << endl;
         free(images_th1);
         free(images_th2);
         free(model1_th1);
@@ -178,22 +194,23 @@ int main(int argc, char **argv){
         sp2.Release();
     }
     else{
+        cout << "server" << MPI_rank << "..." << endl;
         double offline_etime;
         MPI_Status status;
         int flag;
         float y_hat[train_size];
         float *img = (float*)malloc(sizeof(float)*train_size*SIZE);
-        float *model1 = (float*)malloc(sizeof(float)*SIZE*50);
-        cout << "server" << MPI_rank << "..." << endl;
+        float *model1 = (float*)malloc(sizeof(float)*SIZE*outputDim);
+        
         MPI_Recv(&flag, 1, MPI_INT, MPI_client, 0, MPI_COMM_WORLD, &status);
         MPI_Recv(img, train_size*SIZE, MPI_FLOAT, MPI_client, 0, MPI_COMM_WORLD, &status);
-        MPI_Recv(model1, SIZE*50, MPI_FLOAT, MPI_client, 0, MPI_COMM_WORLD, &status);
+        MPI_Recv(model1, SIZE*outputDim, MPI_FLOAT, MPI_client, 0, MPI_COMM_WORLD, &status);
         MPI_Recv(y_hat, train_size, MPI_FLOAT, MPI_client, 0, MPI_COMM_WORLD, &status);
         Triplet T1, T2;
         
-        T1.GetShape(batch_size, SIZE, SIZE, 50);
+        T1.GetShape(batch_size, SIZE, SIZE, outputDim);
         T1.Initial();
-        T2.GetShape(SIZE, batch_size, batch_size, 50);
+        T2.GetShape(SIZE, batch_size, batch_size, outputDim);
         T2.Initial();
         T1.Recv(MPI_client);
         T2.Recv(MPI_client);
@@ -218,19 +235,26 @@ int main(int argc, char **argv){
             T1.GetData(batchImg, model1);
             T1.Rec(MPI_dest);
             T1.OP(flag);
+            for(int j = 0; j < batch_size*outputDim; j++){
+                T1.C[j] = batchY[j%batch_size] - T1.C[j];
+            }
             T2.GetData(batchImg, T1.C);
             T2.Rec(MPI_dest);
             T2.OP(flag);
+            for(int j = 0; j < SIZE*outputDim; j++){
+                model1[j] -= alpha/batch_size*T2.C[j];
+            }
             // break;
         }
         online_etime = timestamp();
+        cout << "Server" << MPI_rank << " train time:" << online_etime-online_stime << endl;
+        cout << "Server" << MPI_rank << " send to client..." << endl;
+        MPI_Send(model1, SIZE, MPI_FLOAT, MPI_client, 0, MPI_COMM_WORLD);
         T1.Release();
         T2.Release();
         free(images);
         free(model1);
         free(y_hat);
-        
-        cout << "Server" << MPI_rank << " train time:" << online_etime-online_stime << endl;
     }
     MPI_Finalize();
     all_etime = timestamp();

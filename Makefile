@@ -11,8 +11,8 @@ OBJECTS = $(BUILDDIR)/compressCommunicate.o $(BUILDDIR)/offline.o $(BUILDDIR)/on
 INC = -I../../common/inc
 LIBS = -L$(CUDA_INSTALL_PATH)/lib64 -lcudart -lcurand -lcublas -lpthread
 RM = rm
-TEST = bin/line
-TESTOBJ = build/line.o
+TESTLinear = bin/linear
+TESTLinearOBJ = build/line.o
 
 
 $(TARGET): $(OBJECTS) $(BUILDDIR)/main.o
@@ -36,9 +36,10 @@ $(BUILDDIR)/read.o: $(SRCDIR)/read.cc
 $(BUILDDIR)/cuda.o: $(SRCDIR)/cuda.cu
 	@mkdir -p $(BUILDDIR)
 	$(NVCC) $(CFLAGS) $(INC) -c $(SRCDIR)/cuda.cu -o $(BUILDDIR)/cuda.o
-Test:
+TestLinear: $(TESTDIR)/line.cc
 	$(MPICC) $(CFLAGS) $(INC) -c $(TESTDIR)/line.cc -o $(BUILDDIR)/line.o
-	$(MPICC) $(OBJECTS) $(TESTOBJ) $(LIBS) -o $(TEST)
+	$(MPICC) $(OBJECTS) $(TESTLinearOBJ) $(LIBS) -o $(TESTLinear)
+
 clean:
 	@echo "clean..."
-	$(RM) -r $(BUILDDIR) $(TARGET)
+	$(RM) -r $(BUILDDIR) $(TARGET) $(TEST)

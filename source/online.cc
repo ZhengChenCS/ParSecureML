@@ -45,12 +45,12 @@ void Triplet::Initial(){
 	}
 	MallocD(GPU_A, row1*col1);
 	MallocD(GPU_B, row2*col2);
-	MallocD(GPU_C, row1*col2);
 	MallocD(GPU_E, row1*col1);
 	MallocD(GPU_F, row2*col2);
 	MallocD(GPU_Z, row1*col2);
 	MallocD(fac1, row1*col2);
 	MallocD(fac2, row1*col2);
+	MallocD(GPU_C, row1*col2);
 	MallocD(GPU_D, row1*col1);
 	flag1 = 0;
 	flag2 = 0;
@@ -65,6 +65,7 @@ void Triplet::Release(){
 	free(old_B);
 	free(delta_A);
 	free(delta_B);
+	free(C);
     free(Z);
 	free(U);
 	free(V);
@@ -172,33 +173,33 @@ void Triplet::Rec(int MPI_dest){
 	struct CSR deltaBCsr1;
 	struct CSR deltaBCsr2;
 	if(csrFlagB1==1 && csrFlagB2==1){
-		MallocCsr(deltaBCsr1, countB, row1, col1);
-		Compress(delta_B, deltaBCsr1, countB, row1, col1);
+		MallocCsr(deltaBCsr1, countB, row2, col2);
+		Compress(delta_B, deltaBCsr1, countB, row2, col2);
 		MPI_Sendrecv(&countB, 1, MPI_INT, MPI_dest, 0, &countB2, 1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
-		MallocCsr(deltaBCsr2, countB2, row1, col1);
+		MallocCsr(deltaBCsr2, countB2, row2, col2);
 		MPI_Sendrecv(deltaBCsr1.val, countB, MPI_FLOAT, MPI_dest, 0, deltaBCsr2.val, countB2, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
 		MPI_Sendrecv(deltaBCsr1.col, countB, MPI_INT, MPI_dest, 0, deltaBCsr2.col, countB2, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
-		MPI_Sendrecv(deltaBCsr1.row, row1, MPI_INT, MPI_dest, 0,  deltaBCsr2.row, row1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
-		deCompress(deltaBCsr2, countB2, row1, col1, F2);
+		MPI_Sendrecv(deltaBCsr1.row, row2, MPI_INT, MPI_dest, 0,  deltaBCsr2.row, row2, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		deCompress(deltaBCsr2, countB2, row2, col2, F2);
 		ReleaseCsr(deltaBCsr1);
 		ReleaseCsr(deltaBCsr2);
 	}
 	if(csrFlagB1==1 && csrFlagB2==0){
-		MallocCsr(deltaBCsr1, countB, row1, col1);
-		Compress(delta_B, deltaBCsr1, countB, row1, col1);
+		MallocCsr(deltaBCsr1, countB, row2, col2);
+		Compress(delta_B, deltaBCsr1, countB, row2, col2);
 		MPI_Send(&countB, 1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD);
 		MPI_Send(deltaBCsr1.val, countB, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD);
 		MPI_Send(deltaBCsr1.col, countB, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD);
-		MPI_Send(deltaBCsr1.row, row1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD);
+		MPI_Send(deltaBCsr1.row, row2, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD);
 		ReleaseCsr(deltaBCsr1);
 		MPI_Recv(F2, row2*col2, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
 	}
 	if(csrFlagB1==0 && csrFlagB2==1){
 		MPI_Recv(&countB2, 1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
-		MallocCsr(deltaBCsr2, countB2, row1, col1);
+		MallocCsr(deltaBCsr2, countB2, row2, col2);
 		MPI_Recv(deltaBCsr2.val, countB2, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
 		MPI_Recv(deltaBCsr2.col, countB2, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
-		MPI_Recv(deltaBCsr2.row, row1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		MPI_Recv(deltaBCsr2.row, row2, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
 		deCompress(deltaBCsr2, countB2, row1, col1, E2);
 		ReleaseCsr(deltaBCsr2);
 		MPI_Send(F1, row2*col2, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD);
@@ -210,7 +211,7 @@ void Triplet::Rec(int MPI_dest){
 		E[i] = E1[i] + E2[i];
 	}
 	for(int i = 0; i < row2*col2; i++){
-		F[i] = F1[i] + E2[i];
+		F[i] = F1[i] + F2[i];
 	}
 }
 void Triplet::cpuToGPU(){

@@ -40,7 +40,6 @@ int main(int argc, char **argv){
     offline_stime = timestamp();
     if(MPI_rank == MPI_client){
         float *A, *B, *C;
-        
         A = (float*)malloc(sizeof(float)*N*N);
         B = (float*)malloc(sizeof(float)*N*N);
         C = (float*)malloc(sizeof(float)*N*N);

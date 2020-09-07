@@ -117,7 +117,7 @@ void Triplet::cudaTripletMul(int flag){
         exit(0);
     }
     cublasDestroy(handle);
-    cudaTripletSum<<<row1*col1/1024+1024, 1024>>>(GPU_C, fac1, fac2, GPU_Z, row1*col2);
+    cudaTripletSum<<<row1*col2/1024+1024, 1024>>>(GPU_C, fac1, fac2, GPU_Z, row1*col2);
     cudaStat = cudaGetLastError();
     if(cudaStat != cudaSuccess){
         cout << "Kernel launch failed." << endl;
@@ -143,5 +143,5 @@ __global__ void cudaConv(int flag, float *GPU_A, float *GPU_B, float *GPU_C, flo
     
 }
 void ConvTriplet::GPU_OP(int flag){
-    cudaConv<<<256, 256>>>(flag, GPU_A, GPU_B, GPU_C, GPU_E, GPU_F, GPU_Z, row1, col1, row2, col2, o_row, o_row, num);
+    cudaConv<<<o_row*o_col*num/1024+1024, 1024>>>(flag, GPU_A, GPU_B, GPU_C, GPU_E, GPU_F, GPU_Z, row1, col1, row2, col2, o_row, o_row, num);
 }
