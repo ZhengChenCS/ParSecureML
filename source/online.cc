@@ -2,11 +2,17 @@
 #include <cstdlib>
 #include <cstring>
 #include <pthread.h>
+#include <sys/time.h>
 #include <cmath>
 #include "../include/ParSecureML.h"
 #include "../include/compress.h"
 #include "../include/read.h"
 #include "mpi.h"
+double timestamp(){
+    struct timeval time;
+    gettimeofday(&time, NULL);
+    return time.tv_sec + 1e-6*time.tv_usec;
+}
 void Triplet::GetShape(int in_row1, int in_col1, int in_row2, int in_col2){
 	row1 = in_row1;
 	col1 = in_col1;
@@ -14,6 +20,7 @@ void Triplet::GetShape(int in_row1, int in_col1, int in_row2, int in_col2){
 	col2 = in_col2;
 }
 void Triplet::Initial(){
+	commtime = 0;
 	A = (float*)malloc(sizeof(float)*row1*col1);
 	old_A = (float*)malloc(sizeof(float)*row1*col1);
 	delta_A = (float*)malloc(sizeof(float)*row1*col1);
@@ -134,9 +141,12 @@ void Triplet::Rec(int MPI_dest){
 		Compress(delta_A, deltaACsr1, countA, row1, col1);
 		MPI_Sendrecv(&countA, 1, MPI_INT, MPI_dest, 0, &countA2, 1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
 		MallocCsr(deltaACsr2, countA2, row1, col1);
+		double stime = timestamp();
 		MPI_Sendrecv(deltaACsr1.val, countA, MPI_FLOAT, MPI_dest, 0, deltaACsr2.val, countA2, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
 		MPI_Sendrecv(deltaACsr1.col, countA, MPI_INT, MPI_dest, 0, deltaACsr2.col, countA2, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
 		MPI_Sendrecv(deltaACsr1.row, row1, MPI_INT, MPI_dest, 0, deltaACsr2.row, row1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		double etime = timestamp();
+		commtime += (etime-stime);
 		deCompress(deltaACsr2, countA2, row1, col1, E2);
 		ReleaseCsr(deltaACsr1);
 		ReleaseCsr(deltaACsr2);
@@ -144,25 +154,34 @@ void Triplet::Rec(int MPI_dest){
 	if(csrFlagA1==1 && csrFlagA2==0){
 		MallocCsr(deltaACsr1, countA, row1, col1);
 		Compress(delta_A, deltaACsr1, countA, row1, col1);
+		double stime = timestamp();
 		MPI_Send(&countA, 1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD);
 		MPI_Send(deltaACsr1.val, countA, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD);
 		MPI_Send(deltaACsr1.col, countA, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD);
 		MPI_Send(deltaACsr1.row, row1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD);
-		ReleaseCsr(deltaACsr1);
 		MPI_Recv(E2, row1*col1, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		double etime = timestamp();
+		commtime += (etime-stime);
+		ReleaseCsr(deltaACsr1);
 	}
 	if(csrFlagA1==0 && csrFlagA2==1){
 		MPI_Recv(&countA2, 1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
 		MallocCsr(deltaACsr2, countA2, row1, col1);
+		double stime = timestamp();
 		MPI_Recv(deltaACsr2.val, countA2, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
 		MPI_Recv(deltaACsr2.col, countA2, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
 		MPI_Recv(deltaACsr2.row, row1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		MPI_Send(E1, row1*col1, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD);
+		double etime = timestamp();
+		commtime += (etime-stime);
 		deCompress(deltaACsr2, countA2, row1, col1, E2);
 		ReleaseCsr(deltaACsr2);
-		MPI_Send(E1, row1*col1, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD);
 	}
 	if(csrFlagA1==0 && csrFlagA2==0){
+		double stime = timestamp();
 		MPI_Sendrecv(E1, row1*col1, MPI_FLOAT, MPI_dest, 0, E2, row1*col1, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		double etime = timestamp();
+		commtime += (etime-stime);
 	}
 
 	int csrFlagB1 = 0, csrFlagB2 = 0;
@@ -177,9 +196,12 @@ void Triplet::Rec(int MPI_dest){
 		Compress(delta_B, deltaBCsr1, countB, row2, col2);
 		MPI_Sendrecv(&countB, 1, MPI_INT, MPI_dest, 0, &countB2, 1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
 		MallocCsr(deltaBCsr2, countB2, row2, col2);
+		double stime = timestamp();
 		MPI_Sendrecv(deltaBCsr1.val, countB, MPI_FLOAT, MPI_dest, 0, deltaBCsr2.val, countB2, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
 		MPI_Sendrecv(deltaBCsr1.col, countB, MPI_INT, MPI_dest, 0, deltaBCsr2.col, countB2, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
 		MPI_Sendrecv(deltaBCsr1.row, row2, MPI_INT, MPI_dest, 0,  deltaBCsr2.row, row2, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		double etime = timestamp();
+		commtime += (stime-etime);
 		deCompress(deltaBCsr2, countB2, row2, col2, F2);
 		ReleaseCsr(deltaBCsr1);
 		ReleaseCsr(deltaBCsr2);
@@ -188,24 +210,33 @@ void Triplet::Rec(int MPI_dest){
 		MallocCsr(deltaBCsr1, countB, row2, col2);
 		Compress(delta_B, deltaBCsr1, countB, row2, col2);
 		MPI_Send(&countB, 1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD);
+		double stime = timestamp();
 		MPI_Send(deltaBCsr1.val, countB, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD);
 		MPI_Send(deltaBCsr1.col, countB, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD);
 		MPI_Send(deltaBCsr1.row, row2, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD);
-		ReleaseCsr(deltaBCsr1);
 		MPI_Recv(F2, row2*col2, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		double etime = timestamp();
+		commtime += (etime-stime);
+		ReleaseCsr(deltaBCsr1);
 	}
 	if(csrFlagB1==0 && csrFlagB2==1){
 		MPI_Recv(&countB2, 1, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
 		MallocCsr(deltaBCsr2, countB2, row2, col2);
 		MPI_Recv(deltaBCsr2.val, countB2, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		double stime = timestamp();
 		MPI_Recv(deltaBCsr2.col, countB2, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
 		MPI_Recv(deltaBCsr2.row, row2, MPI_INT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		MPI_Send(F1, row2*col2, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD);
+		double etime = timestamp();
+		commtime += (etime-stime);
 		deCompress(deltaBCsr2, countB2, row1, col1, E2);
 		ReleaseCsr(deltaBCsr2);
-		MPI_Send(F1, row2*col2, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD);
 	}
 	if(csrFlagB1==0 && csrFlagB2==0){
+		double stime = timestamp();
 		MPI_Sendrecv(F1, row2*col2, MPI_FLOAT, MPI_dest, 0, F2, row2*col2, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+		double etime = timestamp();
+		commtime += (etime-stime);
 	}
 	for(int i = 0; i < row1*col1; i++){
 		E[i] = E1[i] + E2[i];
@@ -271,6 +302,7 @@ void ConvTriplet::GetShape(int in_row1, int in_col1, int in_row2, int in_col2, i
 	o_col = col1-col2+1;
 }
 void ConvTriplet::Initial(){
+	commtime = 0;
 	A = (float*)malloc(sizeof(float)*num*row1*col1);
 	B = (float*)malloc(sizeof(float)*row2*col2);
 	C = (float*)malloc(sizeof(float)*num*o_row*o_col);
@@ -334,9 +366,12 @@ void ConvTriplet::Rec(int MPI_dest){
 	for(int i = 0; i < row2*col2; i++){
 		F1[i] = B[i] - V[i];
 	}
+	double stime = timestamp();
 	MPI_Status status;
 	MPI_Sendrecv(E1, num*o_row*o_col*row2*col2, MPI_FLOAT, MPI_dest, 0, E2, num*o_row*o_col*row2*col2, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
 	MPI_Sendrecv(F1, row2*col2, MPI_FLOAT, MPI_dest, 0, F2, row2*col2, MPI_FLOAT, MPI_dest, 0, MPI_COMM_WORLD, &status);
+	double etime = timestamp();
+	commtime += (etime-stime);
 	for(int i = 0; i < num*o_row*o_col*row2*col2; i++){
 		E[i] = E1[i] + E2[i];
 	}

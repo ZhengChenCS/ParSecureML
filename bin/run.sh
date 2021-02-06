@@ -1,1 +1,1 @@
-srun -N 3 -n 3  runner
+srun -N 3 -n 3 --nodelist=gorgon[2-4]  runner

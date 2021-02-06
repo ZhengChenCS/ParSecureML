@@ -89,6 +89,7 @@ class Triplet{
 		int flag2;
 		int flag3;
 		int pFlag;
+		double commtime;
 		pthread_t pipelineId;
 		void GetShape(int in_row1, int in_col1, int in_row2, int in_col2);
 		void Initial();
@@ -130,6 +131,7 @@ class ConvTriplet{
 		int o_row;
 		int o_col;
 		float *convA;
+		double commtime;
 		void GetShape(int in_row1, int in_col1, int in_row2, int in_col2, int in_num);
 		void Initial();
 		void Release();
@@ -144,6 +146,7 @@ void MallocD(float *&gpu_a, int size);
 void CopyHtoD(float *gpu_a, float *a, int size);
 void CopyDtoH(float *&a, float *&gpu_a, int size);
 void ReleaseGPU(float *A);
+double timestamp();
 
 
 

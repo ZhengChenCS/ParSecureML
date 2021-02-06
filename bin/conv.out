@@ -1,0 +1,35 @@
+setup file: ../setup/VGG
+setup file: ../setup/VGG
+setup file: ../setup/VGG
+server1...
+server2...
+start...
+sp start ...
+Client make time:38.7471
+here
+here
+Client:Send finished.
+Server1: offline end time:42.6603.
+128
+Server2: offline end time:42.6056.
+128
+Server2 train time:1086.98
+Server1 train time:1086.98
+All time:1394.05
+All time:1394.08
+All time:1394.12
+setup file: ../setup/NIST
+setup file: ../setup/NIST
+setup file: ../setup/NIST
+server2...
+server1...
+start...
+sp start ...
+Client make time:26.1906
+here
+here
+Client:Send finished.
+Server1: offline end time:31.862.
+Server2: offline end time:31.9827.
+128
+128
