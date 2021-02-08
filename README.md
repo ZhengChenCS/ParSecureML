@@ -4,7 +4,7 @@
 
 ## Introduction
 
-This is a source code of paper entitled "ParSecureML: An Efficient Parallel Secure Machine Learning Framework on GPUs" by Zheng Chen, Feng Zhang, Amelie Chi Zhou, Jidong Zhai, Chenyang Zhang, Xiaoyong Du,2020.
+This is the source code of paper entitled "ParSecureML: An Efficient Parallel Secure Machine Learning Framework on GPUs" by Zheng Chen, Feng Zhang, Amelie Chi Zhou, Jidong Zhai, Chenyang Zhang, Xiaoyong Du,2020.
 
 We implement a parallel secure machine learning framework on GPUS using secure multi-party computing.
 
