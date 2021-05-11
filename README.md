@@ -56,6 +56,15 @@ If you have any questions,  please contact us (chenzheng123@ruc.edu.cn)
 }
 ```
 
+```
+@inproceedings{chen2020parsecureml,
+  title={ParSecureML: An Efficient Parallel Secure Machine Learning Framework on GPUs},
+  author={Chen, Zheng and Zhang, Feng and Zhou, Amelie Chi and Zhai, Jidong and Zhang, Chenyang and Du, Xiaoyong},
+  booktitle={49th International Conference on Parallel Processing-ICPP},
+  pages={1--11},
+  year={2020}
+}
+```
 
 
 
