@@ -45,13 +45,13 @@ make TestRNN
 
 ​	``cd mpirun``
 
-3.Run example:
+3.Run all example program:
 
 ```shell
 bash run.sh
 ```
 
-If you just want to run a sample, 
+If you just want to run a example,  
 
 ```shell
 bash linear.sh
