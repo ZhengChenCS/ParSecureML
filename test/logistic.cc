@@ -238,7 +238,7 @@ int main(int argc, char **argv){
             all_time,
             server1_offline_time > server2_offline_time ? server1_offline_time : server2_offline_time,
             server1_online_time > server2_online_time ? server1_online_time : server2_online_time,
-            "Linear regression" 
+            "Logistic regression" 
         );
         out.draw();
         if(client2server1 != MPI_GROUP_NULL) MPI_Group_free(&client2server1);
