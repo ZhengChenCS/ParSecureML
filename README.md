@@ -64,57 +64,6 @@ bash rnn.sh
 
 You can also use other appropriate methods to run. Our program needs three nodes to run.
 
-## Result description
-
-We report three metrics for each test program: total time, offline phase time, online phase time, as shown below:
-
-```shell
-+------------------------------------------------------------+
-| Application: Single matrix multiplication                  |
-|------------------------------------------------------------|
-| All Time       | Offline Phase Time    | Online Phase Time |
-| 1.11           | 0.66                  | 0.43              |
-+------------------------------------------------------------+
-+------------------------------------------------------------+
-| Application: Linear regression                             |
-|------------------------------------------------------------|
-| All Time       | Offline Phase Time    | Online Phase Time |
-| 2.58           | 0.95                  | 1.41              |
-+------------------------------------------------------------+
-+------------------------------------------------------------+
-| Application: Logistic regression                           |
-|------------------------------------------------------------|
-| All Time       | Offline Phase Time    | Online Phase Time |
-| 2.34           | 0.88                  | 1.23              |
-+------------------------------------------------------------+
-+------------------------------------------------------------+
-| Application: MLP                                           |
-|------------------------------------------------------------|
-| All Time       | Offline Phase Time    | Online Phase Time |
-| 40.41          | 1.00                  | 39.19             |
-+------------------------------------------------------------+
-+------------------------------------------------------------+
-| Application: CNN                                           |
-|------------------------------------------------------------|
-| All Time       | Offline Phase Time    | Online Phase Time |
-| 36.62          | 0.96                  | 35.42             |
-+------------------------------------------------------------+
-+------------------------------------------------------------+
-| Application: RNN                                           |
-|------------------------------------------------------------|
-| All Time       | Offline Phase Time    | Online Phase Time |
-| 38.57          | 0.98                  | 37.39             |
-+------------------------------------------------------------+
-+------------------------------------------------------------+
-| Application: SVM                                           |
-|------------------------------------------------------------|
-| All Time       | Offline Phase Time    | Online Phase Time |
-| 2.43           | 1.31                  | 0.85              |
-+------------------------------------------------------------+
-```
-
-The results correspond to Table 3 in our TPDS paper.
-
 ## Acknowledgement
 
 ParSecureML  is developed by Renmin University of China, Shenzhen University, Tsinghua University.
@@ -154,3 +103,4 @@ If you have any questions,  please contact us (chenzheng123@ruc.edu.cn)
 
 
 
+### 
